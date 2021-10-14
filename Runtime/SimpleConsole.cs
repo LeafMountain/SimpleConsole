@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Rewired;
 using TMPro;
 using UnityEditor.Compilation;
 using UnityEngine;
@@ -25,7 +24,6 @@ namespace SimpleConsole
         public TMP_Text autoCompleteField;
 
         private MethodInfo[] commands;
-        private Player playerInput;
 
         private void Awake()
         {
@@ -112,7 +110,6 @@ namespace SimpleConsole
             showConsole = !showConsole;
 
             uiParent.SetActive(showConsole);
-            ReInput.controllers.GetController(ControllerType.Keyboard, 0).enabled = !showConsole;
             if (showConsole)
             {
                 inputField.ActivateInputField();
