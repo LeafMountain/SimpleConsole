@@ -1,0 +1,12 @@
+{
+  "name": "com.leafmountain.simpleconsole",
+  "version": "1.0.0",
+  "displayName": "Simple Console",
+  "description": "Simple debug console for Unity games",
+  "unity": "2020.2",
+  "author": {
+    "name": "Alexander Lövberg",
+    "email": "lovbergalexander+dev@gmail.com",
+    "url": "https://www.unity3d.com"
+  }
+}
