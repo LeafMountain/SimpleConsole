@@ -4,9 +4,6 @@
   "displayName": "Simple Console",
   "description": "Simple debug console for Unity games",
   "unity": "2020.2",
-  "dependencies": {
-    "com.unity.textmeshpro": "1.0.0"
-  },
   "author": {
     "name": "Alexander Lövberg",
     "email": "lovbergalexander+dev@gmail.com",
