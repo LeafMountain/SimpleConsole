@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+
 namespace SimpleConsole
 {
     [AttributeUsage(AttributeTargets.Method)]
@@ -7,20 +9,20 @@ namespace SimpleConsole
         public string[][] autoCompleteOptions;
         public ConsoleCommandAttribute() { }
 
-        public ConsoleCommandAttribute(string[] autoCompleteOptions)
+        public ConsoleCommandAttribute(params string[] autoCompleteOptions)
         {
-            this.autoCompleteOptions = new string[1][];
-            this.autoCompleteOptions[0] = autoCompleteOptions;
+            this.autoCompleteOptions = autoCompleteOptions.Select(x => x.Split(',')).ToArray();
+            // this.autoCompleteOptions = autoCompleteOptions;
         }
 
         /// <summary>
         /// Use enum as options
         /// </summary>
         /// <param name="autoCompleteOptions"></param>
-        public ConsoleCommandAttribute(Type autoCompleteOptions)
+        public ConsoleCommandAttribute(params Type[] autoCompleteOptions)
         {
-            this.autoCompleteOptions = new string[1][];
-            this.autoCompleteOptions[0] = Enum.GetNames(autoCompleteOptions);
+            this.autoCompleteOptions = new string[autoCompleteOptions.Length][];
+            this.autoCompleteOptions = autoCompleteOptions.Select(Enum.GetNames).ToArray();
         }
     }
 }

@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices.WindowsRuntime;
-using UnityEditor;
 using UnityEngine;
-using UnityEngine.EventSystems;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -29,6 +27,8 @@ namespace SimpleConsole
         private MethodInfo[] commands;
         private int currentIndex => inputField.text.Count(x => x == ' ');
         private string[] parameters => inputField.text.Split(' ');
+
+        private string[][] options = new string[10][];
 
         private void Awake()
         {
@@ -61,19 +61,10 @@ namespace SimpleConsole
             else if (Keyboard.current.tabKey.wasPressedThisFrame)
             {
                 var autoCompleteCommand = TryAutoComplete(inputField.text);
+                string autoCompleteString = AutoComplete(parameters, options);
                 if (autoCompleteCommand.Any())
                 {
-                    if (currentIndex > 0)
-                    {
-                        var options = GetOptions(autoCompleteCommand[0], currentIndex);
-                        if (options.Count > 0)
-                            inputField.text = $"{autoCompleteCommand[0].Name} {options[0]}";
-                    }
-                    else
-                    {
-                        inputField.text = autoCompleteCommand[0].Name;
-                    }
-
+                    inputField.text = autoCompleteString;
                     if (autoCompleteCommand[0].GetParameters().Length > 1)
                         inputField.text += " ";
 
@@ -98,14 +89,15 @@ namespace SimpleConsole
             else if (Input.GetKeyDown(KeyCode.Tab))
             {
                 var autoCompleteCommand = TryAutoComplete(inputField.text);
+                string autoCompleteString = AutoComplete(parameters, options);
                 if (autoCompleteCommand.Any())
                 {
-                    inputField.text = autoCompleteCommand[0].Name;
+                    inputField.text = autoCompleteString;
                     if (autoCompleteCommand[0].GetParameters().Length > 1)
                         inputField.text += " ";
 
                     inputField.caretPosition = inputField.text.Length;
-                }
+               }
             }
 #endif
         }
@@ -119,36 +111,32 @@ namespace SimpleConsole
             {
                 foreach (MethodInfo command in autoCompleteCommands)
                 {
-                    ParameterInfo[] parameterInfos = command.GetParameters();
-                    if (currentIndex == 0)
-                    {
-                        autoCompleteString += $"{command.Name}";
-                        for (int i = 0; i < parameterInfos.Length; i++)
-                        {
-                            autoCompleteString += $" {parameterInfos[i].Name.ToUpper()}";
-                        }
-                    }
+                    if (currentIndex == 0) options[currentIndex] = autoCompleteCommands.Select(x => x.Name).ToArray();
                     else
                     {
-                        List<string> options = GetOptions(command, currentIndex);
-                        if (options.Count > 0)
-                        {
-                            foreach (string option in options)
+                        var consoleCommandAttribute = (ConsoleCommandAttribute)Array.Find(command.GetCustomAttributes().ToArray(), x => x is ConsoleCommandAttribute);
+                        if (consoleCommandAttribute.autoCompleteOptions.Length > currentIndex - 1)
+                            options[currentIndex] = consoleCommandAttribute.autoCompleteOptions[currentIndex - 1];
+                    }
+
+                    // Show structure of command
+                    var parameterNames = command.GetParameters().Select(x => x.Name).ToArray();
+                    autoCompleteString += $"{command.Name.ToUpper()}";
+                    for (int i = 0; i < parameterNames.Length; i++)
+                    {
+                        autoCompleteString += $" {parameterNames[i].ToUpper()} ";
+                    }
+
+
+                    if (currentIndex > 0)
+                    {
+                        autoCompleteString += "\n\n";
+                        var possibleOptions = GetMatchingStrings(parameters[currentIndex], options[currentIndex]);
+                        if (possibleOptions != null)
+                            for (int i = 0; i < possibleOptions.Length; i++)
                             {
-                                autoCompleteString += $"{command.Name} {option}";
-                                for (int k = currentIndex; k < parameterInfos.Length; k++)
-                                    autoCompleteString += $" {parameterInfos[k].Name.ToUpper()}";
-                                autoCompleteString += "\n";
+                                autoCompleteString += $"{possibleOptions[i]}\n";
                             }
-                        }
-                        else
-                        {
-                            autoCompleteString += $"{command.Name}";
-                            for (int i = 0; i < parameterInfos.Length; i++)
-                            {
-                                autoCompleteString += $" {parameterInfos[i].Name.ToUpper()}";
-                            }
-                        }
                     }
 
                     autoCompleteString += "\n";
@@ -229,30 +217,50 @@ namespace SimpleConsole
             return methods.Values.ToArray();
         }
 
-        public List<string> GetOptions(MethodInfo methodInfo, int index)
+        public static string[] GetOptions(MethodInfo methodInfo, int currentIndex, string parameterText)
         {
-            if (currentIndex > methodInfo.GetParameters().Length - 1) return new List<string>();
+            if (currentIndex > methodInfo.GetParameters().Length) return null;
             Attribute[] attributes = methodInfo.GetCustomAttributes().ToArray();
             for (int i = 0; i < attributes.Length; i++)
             {
                 if (attributes[i] is ConsoleCommandAttribute consoleCommandAttribute)
                 {
                     if (consoleCommandAttribute.autoCompleteOptions.Length < currentIndex - 1 && consoleCommandAttribute.autoCompleteOptions[currentIndex - 1] == null)
-                        return new List<string> { methodInfo.GetParameters()[currentIndex].Name };
-                    string parameterText = parameters.Length < currentIndex ? string.Empty : parameters[currentIndex];
-                    if (parameterText == string.Empty)
-                        return consoleCommandAttribute.autoCompleteOptions[currentIndex - 1].ToList();
-
-                    return consoleCommandAttribute.autoCompleteOptions[currentIndex - 1]?.Where(x => x.StartsWith(parameterText, StringComparison.OrdinalIgnoreCase)).ToList();
+                        return new[] { methodInfo.GetParameters()[currentIndex].Name };
+                    return GetMatchingStrings(parameterText, consoleCommandAttribute.autoCompleteOptions[currentIndex - 1]);
                 }
             }
 
-            return new List<string>();
+            return null;
+        }
+
+        public static string[] GetMatchingStrings(string text, IEnumerable<string> options)
+        {
+            if (options == null) return null;
+            if (text == string.Empty) return options.ToArray();
+            return options.Where(x => x.StartsWith(text, StringComparison.OrdinalIgnoreCase)).ToArray();
         }
 
         public void Test(string text)
         {
             Debug.Log(text);
+        }
+
+        public string AutoComplete(string[] parameters, string[][] options)
+        {
+            string completed = string.Empty;
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                if (options[i] == null) continue;
+
+                string[] matchingStrings = GetMatchingStrings(parameters[i], options[i]);
+                if (matchingStrings != null && matchingStrings.Length > 0)
+                    completed += $"{matchingStrings[0]} ";
+                else
+                    completed += $"{parameters[i]} ";
+            }
+
+            return completed.Trim();
         }
     }
 }
