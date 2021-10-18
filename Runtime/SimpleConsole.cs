@@ -16,6 +16,7 @@ namespace SimpleConsole
     {
         private static SimpleConsole instance;
         public static SimpleConsole Instance => instance ??= instance = FindObjectOfType<SimpleConsole>();
+        public event Action<bool> OnToggleConsole;
 
         public bool showConsole;
         public int maxHistoryCount = 20;
@@ -169,6 +170,8 @@ namespace SimpleConsole
                 inputField.Select();
             }
             else inputField.DeactivateInputField();
+
+            Instance.OnToggleConsole?.Invoke(showConsole);
         }
 
         [ContextMenu("Cache Commands")]
