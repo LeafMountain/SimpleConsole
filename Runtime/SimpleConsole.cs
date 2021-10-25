@@ -122,7 +122,7 @@ namespace SimpleConsole
 
                     // Show structure of command
                     var parameterNames = command.GetParameters().Select(x => x.Name).ToArray();
-                    autoCompleteString += $"{command.Name.ToUpper()}";
+                    autoCompleteString += $"{command.Name}";
                     for (int i = 0; i < parameterNames.Length; i++)
                     {
                         autoCompleteString += $" {parameterNames[i].ToUpper()} ";
