@@ -246,7 +246,7 @@ namespace SimpleConsole
 
         public void Test(string text)
         {
-            Debug.Log(text);
+            //Debug.Log(text);
         }
 
         public string AutoComplete(string[] parameters, string[][] options)
